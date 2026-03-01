@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inference-api
+  namespace: llm-sidecar
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inference-api
+  template:
+    metadata:
+      labels:
+        app: inference-api
+    spec:
+      initContainers:
+      - name: download-model
+        image: localhost:5001/model-downloader:latest
+        imagePullPolicy: Always
+        env:
+        - name: MODEL_ID
+          valueFrom:
+            configMapKeyRef:
+              name: inference-config
+              key: model-id
+        - name: HF_HOME
+          value: "/models/hf"
+        - name: TRANSFORMERS_CACHE
+          value: "/models/hf"
+        - name: HUGGINGFACE_HUB_CACHE
+          value: "/models/hf"
+        volumeMounts:
+        - name: model-storage
+          mountPath: /models
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1"
+
+      containers:
+      - name: vllm-server
+        image: localhost:5001/vllm:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8001
+          name: inference
+        env:
+        - name: MODEL_ID
+          valueFrom:
+            configMapKeyRef:
+              name: inference-config
+              key: model-id
+        - name: HF_HOME
+          value: "/models/hf"
+        - name: TRANSFORMERS_CACHE
+          value: "/models/hf"
+        - name: HUGGINGFACE_HUB_CACHE
+          value: "/models/hf"
+        volumeMounts:
+        - name: model-storage
+          mountPath: /models
+        resources:
+          requests:
+            memory: "8Gi"
+            cpu: "2"
+        livenessProbe:
+          tcpSocket:
+            port: 8001
+          initialDelaySeconds: 120
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /v1/models
+            port: 8001
+          initialDelaySeconds: 180
+          periodSeconds: 10
+
+      - name: fastapi-sidecar
+        image: localhost:5001/fastapi-api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: api
+        env:
+        - name: INFERENCE_HOST
+          value: "localhost"
+        - name: INFERENCE_PORT
+          value: "8001"
+        - name: MODEL_ID
+          valueFrom:
+            configMapKeyRef:
+              name: inference-config
+              key: model-id
+        - name: SYSTEM_MESSAGE
+          valueFrom:
+            configMapKeyRef:
+              name: inference-config
+              key: system-message
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+      volumes:
+      - name: model-storage
+        persistentVolumeClaim:
+          claimName: model-storage
