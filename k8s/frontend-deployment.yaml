@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
       - name: frontend-server
-        image: localhost:5001/frontend:latest
-        imagePullPolicy: Always
+        image: llm-mvp-registry:5000/frontend:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
           name: http
@@ -30,3 +30,9 @@ spec:
             port: 80
           initialDelaySeconds: 10
           periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5

@@ -15,8 +15,8 @@ spec:
     spec:
       initContainers:
       - name: download-model
-        image: localhost:5001/model-downloader:latest
-        imagePullPolicy: Always
+        image: llm-mvp-registry:5000/model-downloader:latest
+        imagePullPolicy: IfNotPresent
         env:
         - name: MODEL_ID
           valueFrom:
@@ -25,22 +25,23 @@ spec:
               key: model-id
         - name: HF_HOME
           value: "/models/hf"
-        - name: TRANSFORMERS_CACHE
-          value: "/models/hf"
-        - name: HUGGINGFACE_HUB_CACHE
+        - name: HF_HUB_CACHE
           value: "/models/hf"
         volumeMounts:
         - name: model-storage
           mountPath: /models
         resources:
           requests:
-            memory: "2Gi"
-            cpu: "1"
+            memory: "512Mi"
+            cpu: "250m"
+            ephemeral-storage: "1Gi"
+          limits:
+            ephemeral-storage: "2Gi"
 
       containers:
       - name: vllm-server
-        image: localhost:5001/vllm:latest
-        imagePullPolicy: Always
+        image: llm-mvp-registry:5000/vllm:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8001
           name: inference
@@ -52,32 +53,34 @@ spec:
               key: model-id
         - name: HF_HOME
           value: "/models/hf"
-        - name: TRANSFORMERS_CACHE
-          value: "/models/hf"
-        - name: HUGGINGFACE_HUB_CACHE
+        - name: HF_HUB_CACHE
           value: "/models/hf"
         volumeMounts:
         - name: model-storage
           mountPath: /models
         resources:
           requests:
-            memory: "8Gi"
-            cpu: "2"
+            memory: "4Gi"
+            cpu: "1"
+            ephemeral-storage: "2Gi"
+          limits:
+            ephemeral-storage: "4Gi"
         livenessProbe:
           tcpSocket:
-            port: 8001
-          initialDelaySeconds: 120
-          periodSeconds: 30
-        readinessProbe:
-          httpGet:
-            path: /v1/models
-            port: 8001
-          initialDelaySeconds: 180
+            port: 8000
+          initialDelaySeconds: 30
           periodSeconds: 10
 
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
       - name: fastapi-sidecar
-        image: localhost:5001/fastapi-api:latest
-        imagePullPolicy: Always
+        image: llm-mvp-registry:5000/fastapi-api:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
           name: api
@@ -98,8 +101,11 @@ spec:
               key: system-message
         resources:
           requests:
-            memory: "512Mi"
-            cpu: "500m"
+            memory: "256Mi"
+            cpu: "250m"
+            ephemeral-storage: "512Mi"
+          limits:
+            ephemeral-storage: "1Gi"
         livenessProbe:
           httpGet:
             path: /health

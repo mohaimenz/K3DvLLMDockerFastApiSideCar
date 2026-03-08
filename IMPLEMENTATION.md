@@ -1,14 +1,10 @@
-# Implementation Guide — K3d vLLM Sidecar MVP
+# Implementation Guide — K3d vLLM Sidecar with a CPU model
 
-This guide walks through building, deploying, and testing the MVP system on your MacBook M3 Pro using vLLM (CPU inference) for model serving.
-
-**Note:** This is a learning-focused implementation. CPU inference will be slower than GPU-accelerated backends, but it's suitable for understanding the Kubernetes + sidecar architecture.
+This guide walks through building, deploying, and testing the system on a MacBook M3 Pro using vLLM (CPU inference) for model serving. CPU inference will be slower than GPU-accelerated backends. I would do the GPU-accelerated one on apple metal using llma-cpp in the next round.
 
 ---
 
 ## Prerequisites
-
-Ensure you have the following installed:
 
 - **Docker Desktop** (with Kubernetes support)
 - **k3d** (v5.0+)

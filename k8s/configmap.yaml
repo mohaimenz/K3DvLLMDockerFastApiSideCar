@@ -4,5 +4,5 @@ metadata:
   name: inference-config
   namespace: llm-sidecar
 data:
-  model-id: "Qwen/Qwen2.5-1.5B-Instruct"
+  model-id: "Qwen/Qwen2.5-0.5B-Instruct"
   system-message: "You are a helpful assistant. Answer clearly and directly. If unsure, say so."
