@@ -1,6 +1,9 @@
-# K3d vLLM Sidecar MVP
-
+# K3d vLLM Sidecar
 A minimal end-to-end system for running local LLMs on Kubernetes (k3d) using vLLM with FastAPI and React.
+
+**Note:** vLLM fails to run on Apple Silicon local Docker environmentv as it is not built for Apple Silicon. Hence, tried to buld the wheel from source (adviced by the vLLM team) for Apple silicon devices. It builts successfully in the Mac local venv. However, Kubernetes pod runs inside a Linux container, it can't access it. Hence, I tried to build vLLM inside the Docker/Kubernetes image (by copying the source to Inference/vllm-source folder and then create the image), so that Kubernetes can run it. Unfortunately, vLLM fails to build inside the Linux ARM64 container.
+
+My next step would be replacing vllm-server container with a lightweight Transformers-based inference server and see if the application can be served.
 
 ## Quick Start
 
@@ -37,48 +40,8 @@ Browser → React Frontend (nginx) → FastAPI Sidecar → vLLM (CPU) → Persis
 - **Download**: Kubernetes initContainer downloads model from Hugging Face on first run
 - **Orchestration**: Kubernetes (k3d) with sidecar pattern
 
-## Project Structure
-
-```
-.
-├── prd.md                          # Product requirements & decisions
-├── IMPLEMENTATION.md               # Detailed step-by-step guide
-├── README.md                       # This file
-├── api/                            # FastAPI application
-│   ├── Dockerfile
-│   ├── app.py
-│   └── requirements.txt
-├── inference/                      # vLLM + model downloader
-│   ├── Dockerfile                  # vLLM server
-│   ├── model-downloader.Dockerfile # Model downloader
-│   └── download-model.py           # Python script for downloading
-├── frontend/                       # React UI
-│   ├── Dockerfile
-│   ├── App.jsx
-│   ├── index.html
-│   ├── main.jsx
-│   ├── nginx.conf
-│   ├── package.json
-│   └── vite.config.js
-├── k8s/                            # Kubernetes manifests
-│   ├── configmap.yaml              # Model config
-│   ├── fastapi-service.yaml
-│   ├── frontend-deployment.yaml
-│   ├── frontend-service.yaml
-│   ├── inference-deployment.yaml
-│   ├── namespace.yaml
-│   └── pvc.yaml
-└── scripts/                        # Helper scripts
-    ├── build-images.sh
-    ├── cleanup.sh
-    ├── create-cluster.sh
-    ├── deploy.sh
-    └── port-forward.sh
-```
-
 ## Requirements
-
-- MacBook M3 Pro (36 GB RAM recommended)
+- MacBook M3 Pro
 - Docker Desktop
 - k3d v5.0+
 - kubectl v1.26+
@@ -124,18 +87,7 @@ Health check for the model server.
 
 Returns `503` if the model is still loading.
 
-## Performance
-
-On Apple M3 Pro with CPU inference via vLLM:
-- Model download: 3-5 minutes (first deployment only)
-- Model load: 1-2 minutes
-- First inference: 15-30 seconds
-- Subsequent: 10-20 seconds per request
-- Memory: ~4-6GB peak
-
-**Note:** CPU inference is slower than Metal GPU, but this MVP prioritizes learning Kubernetes architecture over inference speed.
-
-## MVP Features ✓
+##Features ✓
 
 - [x] Model downloads automatically on first deployment
 - [x] Model persists across pod restarts (no re-download)
@@ -146,14 +98,6 @@ On Apple M3 Pro with CPU inference via vLLM:
 - [x] port-forward for local development
 - [x] Pure Kubernetes YAML (no Helm needed)
 
-## Out of Scope (Post-MVP)
-
-- Streaming responses
-- Authentication
-- Multiple models
-- Autoscaling
-- Production deployment
-- Metrics/observability
 
 ## License
 
